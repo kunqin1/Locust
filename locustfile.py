@@ -15,12 +15,16 @@ from sign import sign
 class UserGame(TaskSet):
 
     @task(1)
+    # task后面的数字表示多个接口同时运行时的概率task(1):task(2):task(1);这里表示按照1：2：1比例执行
     def Gamedetail(self):
+
         try:
+            # 从队列头部获取值
             self.token = self.user.queue_token_list.get()
             # print(self.token)
         except queue.Empty:
-            print('no data exist')
+            print('队列中没有数据了')
+            # 队列中的数据取完后，结束线程
             exit(0)
         key = "84b4aea73e331b15cf7c6d1dd0f7ee9c"
         data = {
@@ -36,18 +40,20 @@ class UserGame(TaskSet):
         }
         # print()
         params1 = sign.GetURL(key, data)
-        req = self.client.get("/game/userHave/userDetailGame", headers=headers, params=params1).text
-
-        # print(req)
-        # if req.code == 0:
-        #     print("ture")
-        # else:
-        #     print("fails")
+        self.url = "/game/userHave/userDetailGame"
+        with self.client.get(self.url, headers=headers, params=params1, catch_response=True) as response:
+            req = response.text
+            # print(req)
+            # if req.code == 0:
+            #     response.success()
+            # else:
+            #     response.failure(req)
 
 
 class GameLocust(HttpUser):
     weight = 1
     tasks = [UserGame]
+    # 定义一个队列
     queue_token_list = queue.Queue()
     host = 'https://api-beta.cdhourong.top'
     wait_time = between(500, 1000)
@@ -56,7 +62,8 @@ class GameLocust(HttpUser):
         token = B.get("tokens")
         # print(token)
         for x in token:
-            queue_token_list.put(x)
+            # strip()出去空格回车等字符串
+            queue_token_list.put(x.strip())
             # print(queue_token_list)
 
 
